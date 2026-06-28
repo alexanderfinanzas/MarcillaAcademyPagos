@@ -1,8 +1,40 @@
-// Transforma el JSON original basado en Plataformas a la nueva arquitectura basada en Programas
+const Utils = {
+  // DOM Helpers
+  el: (tag, attrs = {}) => Object.assign(document.createElement(tag), attrs),
+  get: (selector) => document.querySelector(selector),
+  
+  // Copiar y Abrir enlace de forma simultánea (Core de UX)
+  handleLinkClick: (url) => {
+    if (!url) return;
+    navigator.clipboard.writeText(url).then(() => {
+      window.open(url, '_blank');
+      Utils.showToast('Enlace abierto y copiado');
+    }).catch(err => {
+      console.error('Error al copiar automáticamente: ', err);
+      window.open(url, '_blank');
+      Utils.showToast('Enlace abierto');
+    });
+  },
+
+  copyText: (text) => {
+    navigator.clipboard.writeText(text).then(() => {
+      Utils.showToast('Copiado al portapapeles');
+    });
+  },
+
+  showToast: (message) => {
+    const container = Utils.get('#toast-container');
+    if (!container) return;
+    const toast = Utils.el('div', { className: 'toast', textContent: message });
+    container.appendChild(toast);
+    setTimeout(() => { if (container.contains(toast)) toast.remove(); }, 3000);
+  },
+
+  // Transforma el JSON original basado en Plataformas a la nueva arquitectura basada en Programas
   transformDataToNewArchitecture: (plataformasData) => {
     const programs = {};
 
-    // Helper seguro para mapear columnas (Full, 2, 3, 4 pagos)
+    // Helper seguro para mapear las columnas de cuotas (Full, 2, 3, 4 pagos)
     const mapPlans = (row, startIdx) => {
       if (!row || !Array.isArray(row)) return {};
       return {
@@ -16,29 +48,28 @@
     const processPlatform = (platformName, dataObject) => {
       if (!dataObject) return;
 
-      // Convertimos a entradas legibles tanto si es un Array como si es un Objeto estándar
+      // Convertimos a entradas legibles tanto si viene como Array u Objeto indexado
       const entries = Object.entries(dataObject);
 
       for (const [programKey, rows] of entries) {
         if (!programKey) continue;
         
-        // Limpiar emojis y espacios para estandarizar las pestañas superiores
+        // Limpiamos emojis y normalizamos para agrupar bajo las pestañas correctas
         const cleanProgramKey = programKey.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '').trim();
 
-        // Si es la sección de tickets
+        // Procesamiento específico de Tickets Libres / Abonos
         if (cleanProgramKey.toLowerCase().includes('ticket') || cleanProgramKey.toLowerCase().includes('abono')) {
           if (!programs['Tickets Libres']) programs['Tickets Libres'] = [];
           
-          // Validamos de forma segura que las filas se puedan iterar
           const rowsArray = Array.isArray(rows) ? rows : Object.values(rows || {});
           
           rowsArray.forEach((row, i) => {
-            if (i === 0 || !row || !row[0]) return; // Saltarse la cabecera o filas vacías
+            if (i === 0 || !row || !row[0]) return; // Saltarse cabeceras o filas vacías
             const amount = row[0];
-            // Buscamos si la columna de enlaces está en el índice 2 o 1 del backend
+            // Intentar extraer la URL dinámicamente de las columnas del backend
             const link = row[2] || row[1] || row[4] || row[5]; 
             
-            if (!link) return;
+            if (!link || typeof link !== 'string' || !link.startsWith('http')) return;
 
             let ticketObj = programs['Tickets Libres'].find(t => t.amount === amount);
             if (!ticketObj) {
@@ -50,14 +81,13 @@
           continue;
         }
 
-        // Para programas normales (Crías, Aspirantes, Líderes)
+        // Programas regulares (Crías, Aspirantes, Líderes)
         if (!programs[cleanProgramKey]) programs[cleanProgramKey] = {};
 
-        // Validamos de forma segura que las filas de este programa sean iterables
         const rowsArray = Array.isArray(rows) ? rows : Object.values(rows || {});
 
         rowsArray.forEach((row, index) => {
-          if (index === 0 || !row || !row[0]) return; // Saltarse cabeceras
+          if (index === 0 || !row || !row[0]) return; // Ignorar cabeceras
           
           const currency = row[0]; // EUR, USD, México, etc.
           if (!currency) return;
@@ -66,8 +96,7 @@
             programs[cleanProgramKey][currency] = { plans: {} };
           }
           
-          // Tu script original suele mapear los enlaces a partir de la columna D/E (índices 3, 4 o 5)
-          // Probamos primero el índice 5, si está vacío probamos el índice 1 (donde caen los links financiados)
+          // Mapeo adaptativo: intenta leer desde el índice 5 (columna F) y retrocede al índice 1 si hace falta
           let links = mapPlans(row, 5);
           if (!links['FULL PAY'] && !links['2 PAGOS']) {
             links = mapPlans(row, 1);
@@ -85,7 +114,7 @@
       }
     };
 
-    // Procesamos de forma segura ambas plataformas
+    // Procesar de manera segura estructurando ambas plataformas
     if (plataformasData) {
       processPlatform('whop', plataformasData.whop || plataformasData.Whop);
       processPlatform('stripe', plataformasData.stripe || plataformasData.Stripe);
@@ -93,3 +122,17 @@
 
     return programs;
   },
+
+  getCurrencyMeta: (currencyString) => {
+    const map = {
+      'EUR': { flag: '🇪🇺', iso: 'EUR', name: 'Euro', color: 'var(--color-eur)' },
+      'USD': { flag: '🇺🇸', iso: 'USD', name: 'Dólares', color: 'var(--color-usd)' },
+      'MÉXICO': { flag: '🇲🇽', iso: 'MXN', name: 'México', color: 'var(--color-mxn)' },
+      'COLOMBIA': { flag: '🇨🇴', iso: 'COP', name: 'Colombia', color: 'var(--color-cop)' },
+      'CHILE': { flag: '🇨🇱', iso: 'CLP', name: 'Chile', color: 'var(--color-clp)' },
+      'PERÚ': { flag: '🇵🇪', iso: 'PEN', name: 'Perú', color: 'var(--color-pen)' }
+    };
+    const key = currencyString.toUpperCase().trim();
+    return map[key] || { flag: '🌍', iso: key, name: currencyString, color: 'var(--text-muted)' };
+  }
+};
