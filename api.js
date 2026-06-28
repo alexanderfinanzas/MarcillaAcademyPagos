@@ -1,6 +1,6 @@
 const Api = {
   // Reemplazar por la URL real de tu Google Apps Script
-  API_URL: 'https://script.google.com/macros/s/AKfycbz1V6S3R_zS5DFm6LkDRHN66U23ABw43dM0jc44_Fq6Z7-4TsTd3TZoOLzSOUveL-7p/exec',
+  API_URL: 'https://script.google.com/macros/s/AKfycbwpru3Xq4jGmRT2U-mU39VqVOra9wkwH-H1G8pif8tU8_-0mJGPlAMrTRcnDUFUjMgu/exec',
 
   fetchData: async () => {
     try {
