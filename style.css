@@ -1,0 +1,271 @@
+:root {
+  /* Paleta Base Marcilla */
+  --black: #050505;
+  --bg-app: #0a0a0a;
+  --card-bg: #121212;
+  --card-hover: #181818;
+  --border: #222222;
+  --text-main: #f0ead8;
+  --text-muted: #888888;
+  --gold: #c9a84c;
+  --gold-hover: #e2c97e;
+  
+  /* Marcas */
+  --whop: #9b51e0;
+  --stripe: #635bff;
+
+  /* Monedas ISO Colors */
+  --color-eur: #c9a84c; /* Dorado */
+  --color-usd: #3b82f6; /* Azul */
+  --color-mxn: #10b981; /* Verde */
+  --color-cop: #f59e0b; /* Amarillo */
+  --color-clp: #ef4444; /* Rojo */
+  --color-pen: #991b1b; /* Rojo Oscuro */
+
+  /* Layout */
+  --radius: 8px;
+  --shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background-color: var(--bg-app);
+  color: var(--text-main);
+  font-family: 'Inter', sans-serif;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, .brand h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 600;
+}
+
+/* Layout APP */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 2rem;
+  background: var(--black);
+  border-bottom: 1px solid var(--border);
+}
+
+.brand h1 {
+  font-size: 1.5rem;
+  color: var(--gold);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.brand span {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.tasa-info {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-align: right;
+}
+
+/* Navegación */
+.app-nav {
+  display: flex;
+  gap: 1rem;
+  padding: 0 2rem;
+  background: var(--black);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.app-nav::-webkit-scrollbar { display: none; }
+
+.tab-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  padding: 1rem 0.5rem;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  position: relative;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+.tab-btn:hover { color: var(--text-main); }
+.tab-btn.active { color: var(--gold); }
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--gold);
+}
+
+/* Contenido Principal */
+.app-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2rem;
+  position: relative;
+}
+
+.state-view { display: none; text-align: center; margin-top: 4rem; }
+.state-view.active { display: block; }
+.spinner {
+  width: 40px; height: 40px;
+  border: 3px solid var(--border);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Grid de Tarjetas (Monedas / Transferencias) */
+.grid-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem;
+  animation: fadeIn 0.4s ease-out;
+}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Tarjetas de Moneda */
+.currency-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: var(--transition);
+}
+.currency-card:hover { border-color: var(--card-hover); box-shadow: var(--shadow); }
+
+.card-header {
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+.card-header .flag { font-size: 1.5rem; }
+.card-header .country { font-weight: 600; font-size: 1.1rem; flex: 1; }
+.card-header .iso {
+  font-size: 0.8rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 600;
+  color: var(--bg-app);
+}
+
+/* Filas de Planes (Full Pay, 2 Pagos...) */
+.plan-row {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+.plan-row:last-child { border-bottom: none; }
+.plan-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 0.75rem;
+  display: block;
+}
+
+/* Botones */
+.actions-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.btn-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.6rem;
+  border: none;
+  border-radius: 6px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  font-size: 0.85rem;
+  color: #fff;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.btn-link.whop { background: rgba(155, 81, 224, 0.1); color: #c48df5; border: 1px solid rgba(155, 81, 224, 0.3); }
+.btn-link.whop:hover { background: var(--whop); color: #fff; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(155, 81, 224, 0.4); }
+
+.btn-link.stripe { background: rgba(99, 91, 255, 0.1); color: #9c97ff; border: 1px solid rgba(99, 91, 255, 0.3); }
+.btn-link.stripe:hover { background: var(--stripe); color: #fff; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(99, 91, 255, 0.4); }
+
+/* Tickets Libres Table - Rediseñado a Lista Elegante */
+.ticket-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 600px;
+}
+.ticket-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--card-bg);
+  padding: 1rem 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.ticket-price { font-size: 1.2rem; font-weight: 600; color: var(--gold); }
+.ticket-actions { display: flex; gap: 0.75rem; }
+
+/* Tarjetas de Transferencia */
+.transfer-card { padding: 1.5rem; }
+.transfer-card h3 { color: var(--gold); margin-bottom: 1rem; }
+.data-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0.75rem 0; border-bottom: 1px solid var(--border);
+}
+.data-row:last-child { border-bottom: none; }
+.data-label { color: var(--text-muted); font-size: 0.85rem; }
+.data-value { font-family: monospace; font-size: 1rem; color: var(--text-main); }
+.btn-copy {
+  background: none; border: 1px solid var(--border); color: var(--text-main);
+  padding: 0.2rem 0.5rem; border-radius: 4px; cursor: pointer; transition: var(--transition);
+}
+.btn-copy:hover { border-color: var(--gold); color: var(--gold); }
+
+/* Toasts */
+#toast-container { position: fixed; bottom: 2rem; right: 2rem; display: flex; flex-direction: column; gap: 0.5rem; z-index: 1000; }
+.toast {
+  background: var(--card-bg); color: var(--text-main);
+  padding: 1rem 1.5rem; border-left: 4px solid var(--gold);
+  border-radius: 4px; box-shadow: var(--shadow);
+  animation: slideIn 0.3s forwards, fadeOut 0.3s forwards 2.7s;
+}
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes fadeOut { to { opacity: 0; } }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .app-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
+  .tasa-info { text-align: left; }
+  .ticket-item { flex-direction: column; align-items: flex-start; gap: 1rem; }
+  .ticket-actions { width: 100%; display: grid; grid-template-columns: 1fr 1fr; }
+  .data-row { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+}
