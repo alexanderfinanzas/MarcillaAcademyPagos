@@ -34,51 +34,52 @@ const Utils = {
   transformDataToNewArchitecture: (plataformasData) => {
     const programs = {};
 
-    // Helper seguro para mapear las columnas de cuotas (Full, 2, 3, 4 pagos)
-    const mapPlans = (row, startIdx) => {
+    // Helper adaptativo para extraer los enlaces de las columnas del Sheets
+    const mapPlans = (row) => {
       if (!row || !Array.isArray(row)) return {};
+      // Buscamos si las URLs están al final (índices 5,6,7,8) o al inicio (1,2,3,4)
+      let idx = 1;
+      if (row[5] && String(row[5]).startsWith('http')) idx = 5;
+      else if (row[4] && String(row[4]).startsWith('http')) idx = 4;
+      else if (row[2] && String(row[2]).startsWith('http')) idx = 2;
+
       return {
-        'FULL PAY': row[startIdx] || null,
-        '2 PAGOS': row[startIdx + 1] || null,
-        '3 PAGOS': row[startIdx + 2] || null,
-        '4 PAGOS': row[startIdx + 3] || null
+        'FULL PAY': row[idx] || null,
+        '2 PAGOS': row[idx + 1] || null,
+        '3 PAGOS': row[idx + 2] || null,
+        '4 PAGOS': row[idx + 3] || null
       };
     };
 
     const processPlatform = (platformName, dataObject) => {
       if (!dataObject || typeof dataObject !== 'object') return;
 
-      // Convertimos a entradas legibles (Clave del programa -> Filas del programa)
       const entries = Object.entries(dataObject);
 
       for (const [programKey, rows] of entries) {
         if (!programKey) continue;
         
-        // Limpiamos emojis y normalizamos para agrupar bajo las pestañas correctas
         const cleanProgramKey = programKey.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '').trim();
 
-        // --- DEFENSA ULTRA-ROBUSTA ANTE EL FORMATO DE GOOGLE SHEETS ---
         let rowsArray = [];
         if (Array.isArray(rows)) {
           rowsArray = rows;
         } else if (rows && typeof rows === 'object') {
-          // Si el Apps Script metió las filas dentro de una propiedad intermedia como .filas o .data
           if (Array.isArray(rows.filas)) rowsArray = rows.filas;
           else if (Array.isArray(rows.data)) rowsArray = rows.data;
-          else rowsArray = Object.values(rows); // Si vino indexado por números "0", "1", "2"
+          else rowsArray = Object.values(rows);
         }
 
-        // Si después de todas las validaciones no logramos tener una lista ejecutable, saltamos el programa
         if (!Array.isArray(rowsArray)) continue;
 
-        // Procesamiento específico de Tickets Libres / Abonos
+        // Tickets Libres
         if (cleanProgramKey.toLowerCase().includes('ticket') || cleanProgramKey.toLowerCase().includes('abono')) {
           if (!programs['Tickets Libres']) programs['Tickets Libres'] = [];
           
           rowsArray.forEach((row, i) => {
-            if (i === 0 || !row || !Array.isArray(row) || !row[0]) return; // Saltarse cabeceras o filas inválidas
+            if (i === 0 || !row || !Array.isArray(row) || !row[0]) return;
             const amount = row[0];
-            const link = row[2] || row[1] || row[4] || row[5]; 
+            const link = row[2] || row[1] || row[4] || row[5];
             
             if (!link || typeof link !== 'string' || !link.startsWith('http')) return;
 
@@ -92,39 +93,40 @@ const Utils = {
           continue;
         }
 
-        // Programas regulares (Crías, Aspirantes, Líderes)
+        // Programas Regulares
         if (!programs[cleanProgramKey]) programs[cleanProgramKey] = {};
 
         rowsArray.forEach((row, index) => {
-          if (index === 0 || !row || !Array.isArray(row) || !row[0]) return; // Ignorar cabeceras o celdas vacías
+          if (index === 0 || !row || !Array.isArray(row) || !row[0]) return;
           
-          const currency = row[0]; // EUR, USD, México, etc.
-          if (!currency || typeof currency !== 'string') return;
+          const currency = String(row[0]).toUpperCase().trim();
+          if (!currency || currency.includes('MONEDA')) return;
 
-          if (!programs[cleanProgramKey][currency]) {
-            programs[cleanProgramKey][currency] = { plans: {} };
+          // Estandarizar nombres clave de los países
+          let finalCurrencyKey = row[0];
+          if (currency.includes('EUR')) finalCurrencyKey = 'EUR';
+          if (currency.includes('USD')) finalCurrencyKey = 'USD';
+
+          if (!programs[cleanProgramKey][finalCurrencyKey]) {
+            programs[cleanProgramKey][finalCurrencyKey] = { plans: {} };
           }
           
-          // Mapeo adaptativo de columnas de pago (columna F/6 o D/4 según la versión)
-          let links = mapPlans(row, 5);
-          if (!links['FULL PAY'] && !links['2 PAGOS']) {
-            links = mapPlans(row, 1);
-          }
+          const links = mapPlans(row);
           
           for (const [planName, url] of Object.entries(links)) {
             if (url && (String(url).startsWith('http') || String(url).startsWith('https'))) {
-              if (!programs[cleanProgramKey][currency].plans[planName]) {
-                programs[cleanProgramKey][currency].plans[planName] = {};
+              if (!programs[cleanProgramKey][finalCurrencyKey].plans[planName]) {
+                programs[cleanProgramKey][finalCurrencyKey].plans[planName] = {};
               }
-              programs[cleanProgramKey][currency].plans[planName][platformName] = url;
+              programs[cleanProgramKey][finalCurrencyKey].plans[planName][platformName] = url;
             }
           }
         });
       }
     };
 
-    // Procesar de manera segura estructurando ambas plataformas
     if (plataformasData) {
+      // Intenta mapear independientemente de si viene en mayúsculas o minúsculas del Apps Script
       processPlatform('whop', plataformasData.whop || plataformasData.Whop || plataformasData.WHOP);
       processPlatform('stripe', plataformasData.stripe || plataformasData.Stripe || plataformasData.STRIPE);
     }
