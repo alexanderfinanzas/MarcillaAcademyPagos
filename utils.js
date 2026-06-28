@@ -46,9 +46,9 @@ const Utils = {
     };
 
     const processPlatform = (platformName, dataObject) => {
-      if (!dataObject) return;
+      if (!dataObject || typeof dataObject !== 'object') return;
 
-      // Convertimos a entradas legibles tanto si viene como Array u Objeto indexado
+      // Convertimos a entradas legibles (Clave del programa -> Filas del programa)
       const entries = Object.entries(dataObject);
 
       for (const [programKey, rows] of entries) {
@@ -57,16 +57,27 @@ const Utils = {
         // Limpiamos emojis y normalizamos para agrupar bajo las pestañas correctas
         const cleanProgramKey = programKey.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '').trim();
 
+        // --- DEFENSA ULTRA-ROBUSTA ANTE EL FORMATO DE GOOGLE SHEETS ---
+        let rowsArray = [];
+        if (Array.isArray(rows)) {
+          rowsArray = rows;
+        } else if (rows && typeof rows === 'object') {
+          // Si el Apps Script metió las filas dentro de una propiedad intermedia como .filas o .data
+          if (Array.isArray(rows.filas)) rowsArray = rows.filas;
+          else if (Array.isArray(rows.data)) rowsArray = rows.data;
+          else rowsArray = Object.values(rows); // Si vino indexado por números "0", "1", "2"
+        }
+
+        // Si después de todas las validaciones no logramos tener una lista ejecutable, saltamos el programa
+        if (!Array.isArray(rowsArray)) continue;
+
         // Procesamiento específico de Tickets Libres / Abonos
         if (cleanProgramKey.toLowerCase().includes('ticket') || cleanProgramKey.toLowerCase().includes('abono')) {
           if (!programs['Tickets Libres']) programs['Tickets Libres'] = [];
           
-          const rowsArray = Array.isArray(rows) ? rows : Object.values(rows || {});
-          
           rowsArray.forEach((row, i) => {
-            if (i === 0 || !row || !row[0]) return; // Saltarse cabeceras o filas vacías
+            if (i === 0 || !row || !Array.isArray(row) || !row[0]) return; // Saltarse cabeceras o filas inválidas
             const amount = row[0];
-            // Intentar extraer la URL dinámicamente de las columnas del backend
             const link = row[2] || row[1] || row[4] || row[5]; 
             
             if (!link || typeof link !== 'string' || !link.startsWith('http')) return;
@@ -84,19 +95,17 @@ const Utils = {
         // Programas regulares (Crías, Aspirantes, Líderes)
         if (!programs[cleanProgramKey]) programs[cleanProgramKey] = {};
 
-        const rowsArray = Array.isArray(rows) ? rows : Object.values(rows || {});
-
         rowsArray.forEach((row, index) => {
-          if (index === 0 || !row || !row[0]) return; // Ignorar cabeceras
+          if (index === 0 || !row || !Array.isArray(row) || !row[0]) return; // Ignorar cabeceras o celdas vacías
           
           const currency = row[0]; // EUR, USD, México, etc.
-          if (!currency) return;
+          if (!currency || typeof currency !== 'string') return;
 
           if (!programs[cleanProgramKey][currency]) {
             programs[cleanProgramKey][currency] = { plans: {} };
           }
           
-          // Mapeo adaptativo: intenta leer desde el índice 5 (columna F) y retrocede al índice 1 si hace falta
+          // Mapeo adaptativo de columnas de pago (columna F/6 o D/4 según la versión)
           let links = mapPlans(row, 5);
           if (!links['FULL PAY'] && !links['2 PAGOS']) {
             links = mapPlans(row, 1);
@@ -116,8 +125,8 @@ const Utils = {
 
     // Procesar de manera segura estructurando ambas plataformas
     if (plataformasData) {
-      processPlatform('whop', plataformasData.whop || plataformasData.Whop);
-      processPlatform('stripe', plataformasData.stripe || plataformasData.Stripe);
+      processPlatform('whop', plataformasData.whop || plataformasData.Whop || plataformasData.WHOP);
+      processPlatform('stripe', plataformasData.stripe || plataformasData.Stripe || plataformasData.STRIPE);
     }
 
     return programs;
@@ -132,7 +141,7 @@ const Utils = {
       'CHILE': { flag: '🇨🇱', iso: 'CLP', name: 'Chile', color: 'var(--color-clp)' },
       'PERÚ': { flag: '🇵🇪', iso: 'PEN', name: 'Perú', color: 'var(--color-pen)' }
     };
-    const key = currencyString.toUpperCase().trim();
+    const key = String(currencyString).toUpperCase().trim();
     return map[key] || { flag: '🌍', iso: key, name: currencyString, color: 'var(--text-muted)' };
   }
 };
